@@ -1,0 +1,152 @@
+
+// we applied by external `build.gradle`, so file() method returns related path of it;
+// here, we need dir of this script file
+def AR_LOCAL_PATH = buildscript.sourceFile.parentFile
+
+rootProject.ext {
+    // add some closures to rootProject's ext
+    // 1. add `loadPropertiesTo` method:
+    //      used to load properties from `file` to `target`
+    loadPropertiesTo = { File file, Object target ->
+        Properties fileProperties = new Properties()
+        Reader reader = null
+        try {
+            reader = file.newReader()
+            fileProperties.load(file.newReader())
+        } catch (Throwable e) {
+            throw e
+        } finally {
+            if (reader) {
+                try {
+                    reader.close()
+                } catch (Throwable ignore) {}
+            }
+        }
+        fileProperties.stringPropertyNames().each { propertyName ->
+            target."$propertyName" = fileProperties.getProperty(propertyName)
+        }
+    }
+
+    // 2. add `validUploadProject` method:
+    //      used to check whether target `project` is a valid project prepared to upload
+    validUploadProject = { project ->
+        if (project.group == null || project.group == '') {
+            return false
+        }
+        if (project.name == null || project.name == '') {
+            return false
+        }
+        if (project.version == null || project.version == '' || project.version == 'unspecified') {
+            return false
+        }
+        return true
+    }
+
+    // 3. add `isAndroidProject` method:
+    //      used to check whether target `project` is an android application or library
+    isAndroidProject = { project ->
+        def plugins = project.getPlugins()
+        return plugins.hasPlugin('com.android.application') || plugins.hasPlugin('com.android.library')
+    }
+}
+
+// use the same source map for projects ext
+def arExtras = new HashMap<>();
+arExtras.PROJECT_ENCODING = System.getProperty('file.encoding', 'UTF-8')
+// add all properties from `build-config.properties`
+loadPropertiesTo(new File(AR_LOCAL_PATH, 'build-config.properties'), arExtras)
+// change AVAILABLE_MAVEN_REPO to a list
+if (arExtras.AVAILABLE_MAVEN_REPO && arExtras.AVAILABLE_MAVEN_REPO != '') {
+    arExtras.AVAILABLE_MAVEN_REPO = arExtras.AVAILABLE_MAVEN_REPO.split(';')
+} else {
+    arExtras.AVAILABLE_MAVEN_REPO = []
+}
+
+// add AR extras of project for internal uses
+// add some template script file properties to `AR_EXTRAS`
+arExtras.APP_MODULE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, 'androidrubick.application.module.gradle')
+arExtras.LIB_MODULE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, 'androidrubick.library.module.gradle')
+arExtras.MODULE_RLEASE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, '../release-script/androidrubick.release.gradle')
+
+// Define local repository & maven cache home, for:
+// 1. Each SDK can use the common local repository;
+// 2. One SDK, which needs to clear its local maven cache, may use LOCAL_MAVEN_CACHE_HOME
+// 3. Delete local maven cache when uploadArchives
+
+def localUserHome = System.getProperty('user.home')
+def localMavenHome = new File(localUserHome, '.m2')
+def localMavenCacheHome = new File(localMavenHome, 'repository')
+def localRepoDir = new File(localMavenHome, '1-local-repo')
+if (!localRepoDir.exists()) {
+    localRepoDir.mkdirs()
+}
+def localRepoUrl = "file://${localRepoDir}/"
+
+arExtras.LOCAL_MAVEN_CACHE_HOME = localMavenCacheHome.absolutePath
+arExtras.LOCAL_REPO_HOME = localRepoDir.absolutePath
+arExtras.LOCAL_REPO_URL = localRepoUrl
+
+// Add methods (`ARLog` & `propertyTrue` ...) to all projects
+/**
+ * 我们能像这样打印log:
+ * <pre>
+ *     ARLog("{msg1}", "{msg2}", ...)
+ * </pre>
+ *
+ * 我们能像这样判断一个property是否等价于true:
+ * <pre>
+ *     propertyTrue("{field name}")
+ * </pre>
+ */
+allprojects {
+    project.ext.ARLog = { Object...msgs ->
+        if (msgs) {
+            print "[$project.name] "
+            println msgs.join(' ')
+        }
+    }
+
+    project.ext.propertyValueTrue = { String val ->
+        return val == '1' || 'true'.equalsIgnoreCase(val)
+    }
+
+    project.ext.propertyTrue = { String name ->
+        return project.hasProperty(name) && propertyValueTrue(String.valueOf(project.property(name)))
+    }
+
+    project.ext.loadExtFrom = { File file ->
+        loadPropertiesTo(file, project.ext)
+    }
+
+    // add `AR_EXTRAS` to all projects for internal uses
+    project.ext.AR_EXTRAS = new HashMap<>(arExtras)
+}
+
+// add maven urls into each project
+allprojects {
+    repositories {
+        // add LOCAL_REPO_URL to all projects
+        maven {
+            url AR_EXTRAS.LOCAL_REPO_URL
+        }
+
+        // add AVAILABLE_MAVEN_REPO to all projects
+        AR_EXTRAS.AVAILABLE_MAVEN_REPO.each { repoUrl ->
+            maven { url repoUrl }
+        }
+
+        // use jcenter
+        jcenter()
+    }
+}
+
+// print some info
+ARLog("LOCAL_MAVEN_CACHE_HOME:  ${AR_EXTRAS.LOCAL_MAVEN_CACHE_HOME}")
+ARLog("LOCAL_REPO_HOME:         ${AR_EXTRAS.LOCAL_REPO_HOME}")
+ARLog("LOCAL_REPO_URL:          ${AR_EXTRAS.LOCAL_REPO_URL}")
+
+ARLog("AVAILABLE_MAVEN_REPO:    ${AR_EXTRAS.AVAILABLE_MAVEN_REPO}")
+
+allprojects {
+    ARLog('project.ext: ' + project.ext.getProperties())
+}

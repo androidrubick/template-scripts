@@ -1,0 +1,29 @@
+// used by `settings.gradle` under the Root Project
+// Purpose: Include all sub projects' library modules under `androidrubick-libraries` dir
+
+// define a simple log method
+def ARLog0(msg) {
+    println "[${rootProject.name}] <${buildscript.sourceFile.name}> ${String.valueOf(msg)}"
+}
+
+// define androidrubick-libraries absolute File
+def arLibrariesDir = new File(rootProject.projectDir, 'androidrubick-libraries')
+// print libraries dir
+ARLog0 "arLibrariesDir: ${arLibrariesDir.absolutePath}"
+
+// filter directories
+arLibrariesDir.listFiles(new FileFilter() {
+    @Override
+    boolean accept(File pathname) {
+        return pathname.isDirectory()
+    }
+}).each { dir ->
+    def includeFile = new File(dir, 'library/include.gradle')
+    // check whether `includeFile` exits
+    if (includeFile.isFile()) {
+        ARLog0 "include: ${includeFile.absolutePath}"
+        apply from: includeFile
+    } else {
+        ARLog0 "not include: ${includeFile.absolutePath}"
+    }
+}

@@ -1,0 +1,137 @@
+
+// we applied by external `build.gradle`, so file() method returns related path;
+// here, we need dir of this script file
+def AR_LOCAL_PATH = buildscript.sourceFile.parentFile
+
+// load properties to AR_EXTRAS
+loadPropertiesTo(new File(AR_LOCAL_PATH, 'maven-config.properties'), AR_EXTRAS)
+
+def isReleaseBuild() {
+    if (hasProperty('BUILD_RELEASE')) {
+        return propertyTrue('BUILD_RELEASE')
+    }
+    return propertyValueTrue(System.getProperty('BUILD_RELEASE'))
+}
+
+def getRepositoryUrl() {
+    if (isReleaseBuild()) {
+        return hasProperty('REPO_URL') ? REPO_URL : AR_EXTRAS.DEF_REPO_URL
+    }
+    return AR_EXTRAS.LOCAL_REPO_URL
+}
+
+def getSnapshotRepositoryUrl() {
+    if (isReleaseBuild()) {
+        return hasProperty('SNAPSHOT_REPO_URL') ? SNAPSHOT_REPO_URL : AR_EXTRAS.DEF_SNAPSHOT_REPO_URL
+    }
+    return AR_EXTRAS.LOCAL_REPO_URL
+}
+
+def getRepositoryUsername() {
+    return hasProperty('REPO_USER') ? REPO_USER : "foo"
+}
+
+def getRepositoryPassword() {
+    return hasProperty('REPO_PWD') ? REPO_PWD : "bar"
+}
+
+project.ext.ARConfigPom = { pom ->
+    pom.groupId = AR_EXTRAS.POM_GROUP_ID
+    pom.artifactId = PROJECT_POM_ARTIFACT_ID
+    pom.version = PROJECT_VERSION
+
+    pom.project {
+        name PROJECT_POM_NAME
+        artifactId PROJECT_POM_ARTIFACT_ID
+        packaging PROJECT_POM_PACKAGING
+        description "${PROJECT_POM_DESCRIPTION} [built at ${new Date().format('yyyyMMddHHmmssSSS')}]"
+        url AR_EXTRAS.POM_URL
+
+        scm {
+            url POM_SCM_URL
+            connection POM_SCM_CONNECTION
+            developerConnection POM_SCM_DEV_CONNECTION
+        }
+
+        licenses {
+            license {
+                name AR_EXTRAS.POM_LICENCE_NAME
+                url AR_EXTRAS.POM_LICENCE_URL
+                distribution AR_EXTRAS.POM_LICENCE_DIST
+            }
+        }
+
+        developers {
+            // list developers here
+            developer {
+                id 'bblue000'
+                name 'Yin Yong'
+                email 'yy15151877621@126.com'
+            }
+        }
+    }
+}
+
+project.group = AR_EXTRAS.POM_GROUP_ID
+version = PROJECT_VERSION
+
+// Definitions of release tasks.
+apply plugin: 'maven'
+//使用signing plugin做数字签名
+apply plugin: 'signing'
+
+afterEvaluate { project ->
+    group = AR_EXTRAS.POM_GROUP_ID
+    version = PROJECT_VERSION
+
+    signing {
+        required { isReleaseBuild() && gradle.taskGraph.hasTask("uploadArchives") }
+        sign configurations.archives
+    }
+
+    uploadArchives {
+        configuration = configurations.archives
+        repositories.mavenDeployer {
+            beforeDeployment {
+                MavenDeployment deployment -> signing.signPom(deployment)
+            }
+
+            if (isReleaseBuild()) {
+                ARLog('build release')
+                repository(url: getRepositoryUrl()) {
+                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+                }
+                snapshotRepository(url: getSnapshotRepositoryUrl()) {
+                    authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+                }
+            } else {
+                ARLog('build local')
+                repository(url: getRepositoryUrl())
+                snapshotRepository(url: getSnapshotRepositoryUrl())
+            }
+
+            ARLog("version<${PROJECT_VERSION}>")
+
+            ARConfigPom(pom)
+        }
+    }
+}
+
+/**
+ * do after `uploadArchives`, delete local maven cache of current library
+ */
+afterEvaluate { project ->
+    // 对满足条件（即发布）的模块增加行为
+    if (validUploadProject(project)) {
+        gradle.taskGraph.afterTask { Task task ->
+            if (task.name == 'uploadArchives' && task.project == project) {
+                String subPath = AR_EXTRAS.POM_GROUP_ID.replace('.', File.separator)
+                subPath += File.separator
+                subPath += PROJECT_POM_ARTIFACT_ID
+                def myLocalMavenCacheDir = new File(AR_EXTRAS.LOCAL_MAVEN_CACHE_HOME, subPath)
+                delete myLocalMavenCacheDir
+                ARLog("delete cached dir: $myLocalMavenCacheDir")
+            }
+        }
+    }
+}

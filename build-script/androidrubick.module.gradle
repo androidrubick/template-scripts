@@ -1,0 +1,38 @@
+//apply plugin: 'com.android.application'
+//apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion AR_EXTRAS.COMPILE_SDK_VERSION as int
+    buildToolsVersion AR_EXTRAS.BUILD_TOOLS_VERSION
+
+    defaultConfig {
+        minSdkVersion AR_EXTRAS.MIN_SDK_VERSION as int
+        targetSdkVersion AR_EXTRAS.TARGET_SDK_VERSION as int
+
+        buildConfigField "String", "ProjectEncoding", "\"${AR_EXTRAS.PROJECT_ENCODING}\""
+    }
+    buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        release {
+            propertyTrue('SDK_MINIFY_ENABLED')
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_7
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+
+dependencies {
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+}

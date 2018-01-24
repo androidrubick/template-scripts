@@ -1,0 +1,14 @@
+// here, we need dir of this script file
+def AR_LOCAL_PATH = buildscript.sourceFile.parentFile
+
+// apply android library plugin
+apply plugin: 'com.android.library'
+// include template script
+apply from: new File(AR_LOCAL_PATH, 'androidrubick.module.gradle')
+
+android {
+    defaultConfig {
+        versionCode PROJECT_VERSION_CODE as int
+        versionName PROJECT_VERSION
+    }
+}

@@ -1,0 +1,7 @@
+
+// we applied by external `build.gradle`, so file() method returns related path of it;
+// here, we need dir of this script file
+def AR_LOCAL_PATH = buildscript.sourceFile.parentFile
+
+// include release-script/androidrubick.release.gradle
+apply from: new File(AR_LOCAL_PATH, 'release-script/androidrubick.release.gradle')
