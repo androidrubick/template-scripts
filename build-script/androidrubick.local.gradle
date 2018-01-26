@@ -100,31 +100,50 @@ arExtras.LOCAL_REPO_URL = localRepoUrl
  * </pre>
  */
 allprojects {
-    project.ext.ARLog = { Object...msgs ->
-        if (msgs) {
-            print "[$project.name] "
-            println msgs.join(' ')
+    project.ext {
+        // 1. add `ARLog` method:
+        //      format print text
+        ARLog = { Object...msgs ->
+            if (msgs) {
+                print "[$project.name] "
+                println msgs.join(' ')
+            }
         }
-    }
 
-    project.ext.propertyValueTrue = { String val ->
-        return val == '1' || 'true'.equalsIgnoreCase(val)
-    }
+        // 2. add `propertyValueTrue` method:
+        //      check whether value is `true` - 1 as true too
+        propertyValueTrue = { String val ->
+            return val == '1' || 'true'.equalsIgnoreCase(val)
+        }
 
-    project.ext.propertyTrue = { String name ->
-        return project.hasProperty(name) && propertyValueTrue(String.valueOf(project.property(name)))
-    }
+        // 3. add `propertyTrue` method:
+        //      check whether value of target property is `true` - 1 as true too
+        propertyTrue = { String name ->
+            return project.hasProperty(name) && propertyValueTrue(String.valueOf(project.property(name)))
+        }
 
-    project.ext.loadExtFrom = { File file ->
-        loadPropertiesTo(file, project.ext)
-    }
+        // 4. add `propertyTrue` method:
+        //      check whether value of target property is `true` - 1 as true too
+        loadExtFrom = { File file ->
+            loadPropertiesTo(file, project.ext)
+        }
 
-    // add `AR_EXTRAS` to all projects for internal uses
-    // AR_EXTRAS may be added previously, so we check here
-    if (!project.ext.has('AR_EXTRAS')) {
-        project.ext.AR_EXTRAS = new HashMap<>()
+        // 4. add `availableProguardFiles` method:
+        //      return list of available local proguard files
+        availableProguardFiles = {
+            def files = []
+            if (project.file('proguard-rules.pro').exists()) {
+                files << 'proguard-rules.pro'
+            }
+            if (project.file('proguard-rules.txt').exists()) {
+                files << 'proguard-rules.txt'
+            }
+            return files
+        }
+
+        // add `AR_EXTRAS` to all projects for internal uses
+        AR_EXTRAS = new HashMap<>(arExtras)
     }
-    project.ext.AR_EXTRAS.putAll(arExtras)
 }
 
 // add maven urls into each project

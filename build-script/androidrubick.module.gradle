@@ -20,12 +20,18 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            availableProguardFiles().each { file ->
+                proguardFile file
+            }
         }
 
         release {
             propertyTrue('SDK_MINIFY_ENABLED')
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            availableProguardFiles().each { file ->
+                proguardFile file
+            }
         }
     }
 
