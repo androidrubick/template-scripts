@@ -1,0 +1,18 @@
+// here, we need dir of this script file
+def AR_LOCAL_PATH = buildscript.sourceFile.parentFile
+
+// include template script
+apply from: new File(AR_LOCAL_PATH, 'androidrubick.library.module.gradle')
+
+def INCLUDED_LIB_FILE_NAME = '.includedby.androidrubick'
+
+if (
+        // This lib is included in external project
+        project.file(INCLUDED_LIB_FILE_NAME).exists()
+        // This lib is a single lib
+        && propertyTrue('AR_SINGLE_LIB')) {
+    ARLog('include for external project mode')
+} else {
+    // use root project's module gradle script
+    apply from: AR_EXTRAS.MODULE_RLEASE_SCRIPT
+}

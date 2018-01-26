@@ -64,9 +64,10 @@ if (arExtras.AVAILABLE_MAVEN_REPO && arExtras.AVAILABLE_MAVEN_REPO != '') {
 
 // add AR extras of project for internal uses
 // add some template script file properties to `AR_EXTRAS`
-arExtras.APP_MODULE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, 'androidrubick.application.module.gradle')
-arExtras.LIB_MODULE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, 'androidrubick.library.module.gradle')
-arExtras.MODULE_RLEASE_TEMPLATE_SCRIPT = new File(AR_LOCAL_PATH, '../release-script/androidrubick.release.gradle')
+arExtras.APP_MODULE_SCRIPT          = new File(AR_LOCAL_PATH, 'androidrubick.application.module.gradle')
+arExtras.LIB_MODULE_SCRIPT          = new File(AR_LOCAL_PATH, 'androidrubick.library.module.gradle')
+arExtras.RELEASE_LIB_MODULE_SCRIPT  = new File(AR_LOCAL_PATH, 'androidrubick.release.library.module.gradle')
+arExtras.MODULE_RLEASE_SCRIPT       = new File(AR_LOCAL_PATH, '../release-script/androidrubick.release.gradle')
 
 // Define local repository & maven cache home, for:
 // 1. Each SDK can use the common local repository;
@@ -119,7 +120,11 @@ allprojects {
     }
 
     // add `AR_EXTRAS` to all projects for internal uses
-    project.ext.AR_EXTRAS = new HashMap<>(arExtras)
+    // AR_EXTRAS may be added previously, so we check here
+    if (!project.ext.has('AR_EXTRAS')) {
+        project.ext.AR_EXTRAS = new HashMap<>()
+    }
+    project.ext.AR_EXTRAS.putAll(arExtras)
 }
 
 // add maven urls into each project

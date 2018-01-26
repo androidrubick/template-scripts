@@ -1,6 +1,9 @@
 //apply plugin: 'com.android.application'
 //apply plugin: 'com.android.library'
 
+AR_EXTRAS.PROJECT_VERSION_CODE = project.hasProperty('PROJECT_VERSION_CODE') ? PROJECT_VERSION_CODE : '1'
+AR_EXTRAS.PROJECT_VERSION = project.hasProperty('PROJECT_VERSION') ? PROJECT_VERSION : '1.0.0'
+
 android {
     compileSdkVersion AR_EXTRAS.COMPILE_SDK_VERSION as int
     buildToolsVersion AR_EXTRAS.BUILD_TOOLS_VERSION
@@ -8,6 +11,9 @@ android {
     defaultConfig {
         minSdkVersion AR_EXTRAS.MIN_SDK_VERSION as int
         targetSdkVersion AR_EXTRAS.TARGET_SDK_VERSION as int
+
+        versionCode AR_EXTRAS.PROJECT_VERSION_CODE as int
+        versionName AR_EXTRAS.PROJECT_VERSION
 
         buildConfigField "String", "ProjectEncoding", "\"${AR_EXTRAS.PROJECT_ENCODING}\""
     }
